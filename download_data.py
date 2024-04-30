@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 import tqdm
 import os
-import youtube_dl
+import yt_dlp as youtube_dl
 import argparse
 import logging
 import pandas as pd
@@ -16,6 +15,12 @@ parser.add_argument("--video_end_id", type=int,default=11000)
 parser.add_argument("--raw_video_save_dir", type=str,default="miradata/raw_video")
 parser.add_argument("--clip_video_save_dir", type=str,default="miradata/clip_video")
 args = parser.parse_args()
+
+# Check and create directories if they do not exist
+if not os.path.exists(args.raw_video_save_dir):
+    os.makedirs(args.raw_video_save_dir)
+if not os.path.exists(args.clip_video_save_dir):
+    os.makedirs(args.clip_video_save_dir)
 
 encodings = ['ISO-8859-1', 'cp1252', 'utf-8']
 # Try using different encoding formats
@@ -45,10 +50,10 @@ for i, row in tqdm.tqdm(df.iterrows()):
 
             ydl_opts= {
             'format': '22', # mp4        1280x720   720p  550k , avc1.64001F, 24fps, mp4a.40.2@192k (44100Hz) (best)
-            'continue': True,
+            'continue_dl': True,
             'outtmpl': video_download_path,
-            'external-downloader':'aria2c',
-            'external-downloader-args': '-x 16 -k 1M',
+            'external_downloader':'aria2c',
+            'external_downloader_args': '-x 16 -k 1M',
             }
             ydl = youtube_dl.YoutubeDL(ydl_opts)
             ydl.download(
@@ -57,11 +62,11 @@ for i, row in tqdm.tqdm(df.iterrows()):
             break
 
         except Exception as error:
-            print(error)
-            logging.debug(f"Can not download video {key}, skip")
-            logging.debug(f"Try another time")
-            fail_times+=1
-            if fail_times==3:
+            print(f"Download failed for video_id {video_id}, error: {str(error)}")
+            logging.error(f"Download failed for video_id {video_id}, error: {str(error)}")
+            fail_times += 1
+            if fail_times >= 3:
+                print(f"Failed 3 times for video_id {video_id}, skipping...")
                 break
 
     # cut
@@ -82,7 +87,8 @@ for i, row in tqdm.tqdm(df.iterrows()):
 
         clip.write_videofile(clip_save_path)
 
-    except:
-        print("cutting clip wrong")
+    except Exception as error:
+        print(f"Error cutting video {video_name}: {str(error)}")
+        logging.error(f"Error cutting video {video_name}: {str(error)}")
 
 print(f"Finish")
