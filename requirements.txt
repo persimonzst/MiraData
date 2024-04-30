@@ -1,0 +1,4 @@
+pandas
+argparse
+yt-dlp
+moviepy
